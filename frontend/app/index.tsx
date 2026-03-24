@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 // Mock data for the dashboard
 const nextPayment = {
@@ -63,6 +64,12 @@ const stats = {
 };
 
 export default function FintechDashboard() {
+  const router = useRouter();
+
+  const navigateToCircle = () => {
+    router.push('/circle-details');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -168,7 +175,7 @@ export default function FintechDashboard() {
 
         {/* Circle Cards */}
         {circles.map((circle) => (
-          <TouchableOpacity key={circle.id} style={styles.circleCard} activeOpacity={0.7}>
+          <TouchableOpacity key={circle.id} style={styles.circleCard} activeOpacity={0.7} onPress={navigateToCircle}>
             <View style={styles.circleHeader}>
               <View style={styles.circleInfo}>
                 <View style={[styles.circleIcon, { backgroundColor: circle.color + '20' }]}>
