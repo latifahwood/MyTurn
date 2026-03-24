@@ -70,6 +70,10 @@ export default function FintechDashboard() {
     router.push('/circle-details');
   };
 
+  const navigateToCreateCircle = () => {
+    router.push('/create-circle');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -239,7 +243,7 @@ export default function FintechDashboard() {
         ))}
 
         {/* Add Circle Button */}
-        <TouchableOpacity style={styles.addCircleBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.addCircleBtn} activeOpacity={0.7} onPress={navigateToCreateCircle}>
           <Ionicons name="add-circle-outline" size={24} color="#3B82F6" />
           <Text style={styles.addCircleText}>Join or Create a Circle</Text>
         </TouchableOpacity>
