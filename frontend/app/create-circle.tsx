@@ -45,6 +45,9 @@ export default function CreateCircle() {
   const [selectedPayoutOrder, setSelectedPayoutOrder] = useState('auto');
   const [memberInput, setMemberInput] = useState('');
   const [addedMembers, setAddedMembers] = useState<string[]>([]);
+  const [lateFeeEnabled, setLateFeeEnabled] = useState(false);
+  const [gracePeriod, setGracePeriod] = useState('3');
+  const [lateFeeAmount, setLateFeeAmount] = useState('25');
 
   const handleAddMember = () => {
     if (memberInput.trim() && !addedMembers.includes(memberInput.trim())) {
@@ -284,6 +287,80 @@ export default function CreateCircle() {
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          {/* Late Fee Rules Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionTitle}>Late Fee Rules</Text>
+                <Text style={styles.sectionSubtitle}>Set penalties for late payments</Text>
+              </View>
+              <TouchableOpacity 
+                style={[styles.toggle, lateFeeEnabled && styles.toggleEnabled]}
+                onPress={() => setLateFeeEnabled(!lateFeeEnabled)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.toggleThumb, lateFeeEnabled && styles.toggleThumbEnabled]} />
+              </TouchableOpacity>
+            </View>
+
+            {lateFeeEnabled && (
+              <View style={styles.lateFeeContent}>
+                {/* Grace Period */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Grace Period</Text>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="time-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="3"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      value={gracePeriod}
+                      onChangeText={setGracePeriod}
+                    />
+                    <View style={styles.inputSuffixBadge}>
+                      <Text style={styles.inputSuffixBadgeText}>days</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Late Fee Amount */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Late Fee Amount</Text>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.currencyPrefix}>$</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.amountInput]}
+                      placeholder="25"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      value={lateFeeAmount}
+                      onChangeText={setLateFeeAmount}
+                    />
+                    <View style={styles.perPeriodBadge}>
+                      <Text style={styles.perPeriodText}>per late payment</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Helper Text */}
+                <View style={styles.helperTextContainer}>
+                  <Ionicons name="information-circle" size={18} color="#64748B" />
+                  <Text style={styles.helperText}>
+                    If a member is unpaid after the {gracePeriod || '0'}-day grace period, a ${lateFeeAmount || '0'} late fee will be added automatically to their contribution.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {!lateFeeEnabled && (
+              <View style={styles.disabledState}>
+                <Ionicons name="timer-outline" size={28} color="#CBD5E1" />
+                <Text style={styles.disabledStateText}>Enable to set grace period and late fees</Text>
+              </View>
+            )}
           </View>
 
           {/* Trust Indicators */}
@@ -706,5 +783,73 @@ const styles = StyleSheet.create({
   summaryText: {
     fontSize: 12,
     color: '#64748B',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  toggle: {
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#E2E8F0',
+    padding: 3,
+    justifyContent: 'center',
+  },
+  toggleEnabled: {
+    backgroundColor: '#3B82F6',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleThumbEnabled: {
+    alignSelf: 'flex-end',
+  },
+  lateFeeContent: {
+    marginTop: 4,
+  },
+  inputSuffixBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  inputSuffixBadgeText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  helperTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 12,
+    gap: 10,
+  },
+  helperText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+  },
+  disabledState: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 8,
+  },
+  disabledStateText: {
+    fontSize: 13,
+    color: '#94A3B8',
   },
 });

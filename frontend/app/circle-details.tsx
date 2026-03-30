@@ -379,7 +379,7 @@ export default function CircleDetails() {
           <Text style={styles.secondaryBtnText}>Remind Group</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity activeOpacity={0.8} style={styles.primaryBtnContainer}>
+        <TouchableOpacity activeOpacity={0.8} style={styles.primaryBtnContainer} onPress={() => router.push('/payment')}>
           <LinearGradient
             colors={['#3B82F6', '#2563EB']}
             start={{ x: 0, y: 0 }}
