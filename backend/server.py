@@ -73,6 +73,76 @@ class PaymentResponse(BaseModel):
     message: str
     payment: Optional[Payment] = None
 
+# Circle Models
+class Circle(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    contributionAmount: float
+    frequency: str = "monthly"  # weekly, biweekly, monthly
+    totalMembers: int
+    memberCount: int = 1
+    gracePeriodDays: int = 3
+    lateFeeEnabled: bool = False
+    lateFeeAmount: float = 0
+    inviteCode: str
+    inviteLink: str
+    adminId: str
+    adminName: str
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+
+class CircleCreate(BaseModel):
+    name: str
+    contributionAmount: float
+    frequency: str = "monthly"
+    totalMembers: int
+    gracePeriodDays: int = 3
+    lateFeeEnabled: bool = False
+    lateFeeAmount: float = 0
+    adminId: str
+    adminName: str
+
+class CirclePreview(BaseModel):
+    id: str
+    name: str
+    contributionAmount: float
+    frequency: str
+    memberCount: int
+    totalMembers: int
+    adminName: str
+
+class CircleResponse(BaseModel):
+    success: bool
+    message: str
+    circle: Optional[Circle] = None
+    inviteCode: Optional[str] = None
+
+# Membership Models
+class Membership(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    userId: str
+    userName: str
+    circleId: str
+    circleName: str
+    role: str = "member"  # admin, member
+    turnPosition: int
+    joinedAt: datetime = Field(default_factory=datetime.utcnow)
+
+class MembershipCreate(BaseModel):
+    inviteCode: str
+    userId: str
+    userName: str
+
+class JoinResponse(BaseModel):
+    success: bool
+    message: str
+    membership: Optional[Membership] = None
+
+# Helper function to generate invite code
+def generate_invite_code():
+    chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    import random
+    return ''.join(random.choice(chars) for _ in range(8))
+
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
@@ -179,6 +249,133 @@ async def get_pending_payments(user_id: str):
         "paymentStatus": "pending"
     }).to_list(100)
     return [Payment(**p) for p in payments]
+
+# Circle Endpoints
+@api_router.post("/circles", response_model=CircleResponse)
+async def create_circle(input: CircleCreate):
+    """Create a new savings circle"""
+    invite_code = generate_invite_code()
+    invite_link = f"https://savingscircle.app/join/{invite_code}"
+    
+    circle = Circle(
+        name=input.name,
+        contributionAmount=input.contributionAmount,
+        frequency=input.frequency,
+        totalMembers=input.totalMembers,
+        memberCount=1,
+        gracePeriodDays=input.gracePeriodDays,
+        lateFeeEnabled=input.lateFeeEnabled,
+        lateFeeAmount=input.lateFeeAmount,
+        inviteCode=invite_code,
+        inviteLink=invite_link,
+        adminId=input.adminId,
+        adminName=input.adminName,
+    )
+    
+    await db.circles.insert_one(circle.dict())
+    
+    # Create membership for admin
+    membership = Membership(
+        userId=input.adminId,
+        userName=input.adminName,
+        circleId=circle.id,
+        circleName=circle.name,
+        role="admin",
+        turnPosition=1,
+    )
+    await db.memberships.insert_one(membership.dict())
+    
+    return CircleResponse(
+        success=True,
+        message="Circle created successfully",
+        circle=circle,
+        inviteCode=invite_code
+    )
+
+@api_router.get("/circles/{circle_id}", response_model=Circle)
+async def get_circle(circle_id: str):
+    """Get a circle by ID"""
+    circle = await db.circles.find_one({"id": circle_id})
+    if not circle:
+        raise HTTPException(status_code=404, detail="Circle not found")
+    return Circle(**circle)
+
+@api_router.get("/circles/invite/{invite_code}", response_model=CirclePreview)
+async def get_circle_by_invite(invite_code: str):
+    """Get circle preview by invite code"""
+    circle = await db.circles.find_one({"inviteCode": invite_code.upper()})
+    if not circle:
+        raise HTTPException(status_code=404, detail="Circle not found. Please check the invite code.")
+    
+    return CirclePreview(
+        id=circle["id"],
+        name=circle["name"],
+        contributionAmount=circle["contributionAmount"],
+        frequency=circle["frequency"],
+        memberCount=circle["memberCount"],
+        totalMembers=circle["totalMembers"],
+        adminName=circle["adminName"]
+    )
+
+@api_router.post("/circles/join", response_model=JoinResponse)
+async def join_circle(input: MembershipCreate):
+    """Join a circle using invite code"""
+    # Find the circle
+    circle = await db.circles.find_one({"inviteCode": input.inviteCode.upper()})
+    if not circle:
+        raise HTTPException(status_code=404, detail="Circle not found")
+    
+    # Check if circle is full
+    if circle["memberCount"] >= circle["totalMembers"]:
+        raise HTTPException(status_code=400, detail="This circle is full")
+    
+    # Check if user is already a member
+    existing = await db.memberships.find_one({
+        "circleId": circle["id"],
+        "userId": input.userId
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="You are already a member of this circle")
+    
+    # Determine turn position (next available)
+    turn_position = circle["memberCount"] + 1
+    
+    # Create membership
+    membership = Membership(
+        userId=input.userId,
+        userName=input.userName,
+        circleId=circle["id"],
+        circleName=circle["name"],
+        role="member",
+        turnPosition=turn_position,
+    )
+    await db.memberships.insert_one(membership.dict())
+    
+    # Update circle member count
+    await db.circles.update_one(
+        {"id": circle["id"]},
+        {"$inc": {"memberCount": 1}}
+    )
+    
+    return JoinResponse(
+        success=True,
+        message=f"Successfully joined {circle['name']}",
+        membership=membership
+    )
+
+@api_router.get("/circles/user/{user_id}", response_model=List[Circle])
+async def get_user_circles(user_id: str):
+    """Get all circles a user is a member of"""
+    memberships = await db.memberships.find({"userId": user_id}).to_list(100)
+    circle_ids = [m["circleId"] for m in memberships]
+    circles = await db.circles.find({"id": {"$in": circle_ids}}).to_list(100)
+    return [Circle(**c) for c in circles]
+
+@api_router.get("/memberships/circle/{circle_id}", response_model=List[Membership])
+async def get_circle_members(circle_id: str):
+    """Get all members of a circle"""
+    memberships = await db.memberships.find({"circleId": circle_id}).to_list(100)
+    return [Membership(**m) for m in memberships]
 
 # Include the router in the main app
 app.include_router(api_router)

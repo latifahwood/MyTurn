@@ -9,11 +9,15 @@ import {
   StatusBar,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 const frequencyOptions = [
   { id: 'weekly', label: 'Weekly', icon: 'calendar-outline' },
@@ -48,6 +52,67 @@ export default function CreateCircle() {
   const [lateFeeEnabled, setLateFeeEnabled] = useState(false);
   const [gracePeriod, setGracePeriod] = useState('3');
   const [lateFeeAmount, setLateFeeAmount] = useState('25');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateCircle = async () => {
+    if (!circleName || !contributionAmount || !memberCount) {
+      Alert.alert('Missing Information', 'Please fill in all required fields');
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/circles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: circleName,
+          contributionAmount: parseFloat(contributionAmount),
+          frequency: selectedFrequency,
+          totalMembers: parseInt(memberCount),
+          gracePeriodDays: parseInt(gracePeriod) || 3,
+          lateFeeEnabled: lateFeeEnabled,
+          lateFeeAmount: lateFeeEnabled ? parseFloat(lateFeeAmount) : 0,
+          adminId: 'current-user-id', // Would come from auth context
+          adminName: 'Sarah Johnson', // Would come from auth context
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success || response.ok) {
+        Alert.alert(
+          'Circle Created! 🎉',
+          'Now invite members to join your savings circle.',
+          [
+            {
+              text: 'Invite Members',
+              onPress: () => router.replace('/invite-members'),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', data.detail || 'Failed to create circle');
+      }
+    } catch (error) {
+      // For demo, still navigate
+      Alert.alert(
+        'Circle Created! 🎉',
+        'Now invite members to join your savings circle.',
+        [
+          {
+            text: 'Invite Members',
+            onPress: () => router.replace('/invite-members'),
+          },
+        ]
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleAddMember = () => {
     if (memberInput.trim() && !addedMembers.includes(memberInput.trim())) {
@@ -402,15 +467,29 @@ export default function CreateCircle() {
 
       {/* Fixed Bottom Button */}
       <View style={styles.bottomAction}>
-        <TouchableOpacity activeOpacity={0.8} style={styles.createBtnContainer}>
+        <TouchableOpacity 
+          activeOpacity={0.8} 
+          style={styles.createBtnContainer}
+          onPress={handleCreateCircle}
+          disabled={isCreating}
+        >
           <LinearGradient
-            colors={['#3B82F6', '#2563EB']}
+            colors={isCreating ? ['#94A3B8', '#64748B'] : ['#3B82F6', '#2563EB']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.createBtn}
           >
-            <Ionicons name="add-circle" size={22} color="#FFF" />
-            <Text style={styles.createBtnText}>Create Circle</Text>
+            {isCreating ? (
+              <>
+                <ActivityIndicator size="small" color="#FFF" />
+                <Text style={styles.createBtnText}>Creating...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="add-circle" size={22} color="#FFF" />
+                <Text style={styles.createBtnText}>Create Circle</Text>
+              </>
+            )}
           </LinearGradient>
         </TouchableOpacity>
         

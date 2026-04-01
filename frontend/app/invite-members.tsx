@@ -33,8 +33,6 @@ const inviteLink = `https://savingscircle.app/join/${inviteCode}`;
 export default function InviteMembers() {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const [joinCode, setJoinCode] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
 
   const handleCopyLink = async () => {
     await Clipboard.setStringAsync(inviteLink);
@@ -57,21 +55,6 @@ export default function InviteMembers() {
     const message = encodeURIComponent(`Join my savings circle! 💰\n\nUse this link to join: ${inviteLink}`);
     // This would open WhatsApp with the message
     Alert.alert('Share via WhatsApp', 'WhatsApp share would open here in a real device');
-  };
-
-  const handleJoinCircle = () => {
-    if (joinCode.length < 6) {
-      Alert.alert('Invalid Code', 'Please enter a valid invite code');
-      return;
-    }
-    setIsJoining(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsJoining(false);
-      Alert.alert('Success!', 'You have joined the circle successfully', [
-        { text: 'OK', onPress: () => router.push('/') }
-      ]);
-    }, 1500);
   };
 
   return (
@@ -214,32 +197,15 @@ export default function InviteMembers() {
             Enter the code shared with you to join an existing circle
           </Text>
 
-          <View style={styles.joinInputContainer}>
-            <TextInput
-              style={styles.joinInput}
-              placeholder="Enter invite code"
-              placeholderTextColor="#94A3B8"
-              value={joinCode}
-              onChangeText={setJoinCode}
-              autoCapitalize="characters"
-              maxLength={8}
-            />
-            <TouchableOpacity 
-              style={[
-                styles.joinBtn,
-                joinCode.length < 6 && styles.joinBtnDisabled
-              ]}
-              onPress={handleJoinCircle}
-              disabled={joinCode.length < 6 || isJoining}
-              activeOpacity={0.8}
-            >
-              {isJoining ? (
-                <Text style={styles.joinBtnText}>Joining...</Text>
-              ) : (
-                <Text style={styles.joinBtnText}>Join</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={styles.joinCircleLink}
+            onPress={() => router.push('/join-circle')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="enter-outline" size={20} color="#3B82F6" />
+            <Text style={styles.joinCircleLinkText}>Go to Join Circle</Text>
+            <Ionicons name="chevron-forward" size={18} color="#3B82F6" />
+          </TouchableOpacity>
         </View>
 
         {/* Trust Indicators */}
@@ -476,37 +442,23 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 16,
   },
-  joinInputContainer: {
+  joinCircleLink: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  joinInput: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1E293B',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  joinBtn: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    paddingVertical: 14,
+    gap: 8,
   },
-  joinBtnDisabled: {
-    backgroundColor: '#94A3B8',
-  },
-  joinBtnText: {
+  joinCircleLinkText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFF',
+    color: '#3B82F6',
+    flex: 1,
+    textAlign: 'center',
   },
   trustSection: {
     flexDirection: 'row',
