@@ -250,6 +250,27 @@ async def get_pending_payments(user_id: str):
     }).to_list(100)
     return [Payment(**p) for p in payments]
 
+@api_router.get("/payments/history/{user_id}")
+async def get_payment_history(user_id: str):
+    """Get payment history for a user (all payments sorted by date)"""
+    payments = await db.payments.find({"userId": user_id}).sort("createdAt", -1).to_list(100)
+    
+    # Format for frontend
+    history = []
+    for p in payments:
+        history.append({
+            "id": p.get("id"),
+            "date": p.get("dueDate").strftime("%b %d, %Y") if p.get("dueDate") else "",
+            "amount": p.get("totalAmountPaid", p.get("contributionAmount", 0)),
+            "circleName": p.get("circleName", "Unknown Circle"),
+            "status": p.get("paymentStatus", "pending"),
+            "lateFee": p.get("lateFee", 0),
+            "paidDate": p.get("paidDate").isoformat() if p.get("paidDate") else None,
+            "daysOverdue": 0  # Would calculate from dueDate
+        })
+    
+    return history
+
 # Circle Endpoints
 @api_router.post("/circles", response_model=CircleResponse)
 async def create_circle(input: CircleCreate):

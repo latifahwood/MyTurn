@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,17 @@ import {
   TouchableOpacity,
   StatusBar,
   Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-// Mock payment history data
-const paymentHistory = [
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Default mock data (used when API not available)
+const defaultPaymentHistory = [
   {
     id: '1',
     date: 'Mar 12, 2025',
@@ -21,6 +25,7 @@ const paymentHistory = [
     circleName: 'Gold Savings Circle',
     status: 'paid',
     lateFee: 0,
+    paidDate: '2025-03-12T10:30:00Z',
   },
   {
     id: '2',
@@ -29,6 +34,7 @@ const paymentHistory = [
     circleName: 'Gold Savings Circle',
     status: 'paid',
     lateFee: 25,
+    paidDate: '2025-02-18T14:20:00Z',
   },
   {
     id: '3',
@@ -37,6 +43,7 @@ const paymentHistory = [
     circleName: 'Family Fund',
     status: 'paid',
     lateFee: 0,
+    paidDate: '2025-03-10T09:15:00Z',
   },
   {
     id: '4',
@@ -45,6 +52,7 @@ const paymentHistory = [
     circleName: 'Gold Savings Circle',
     status: 'pending',
     lateFee: 0,
+    paidDate: null,
   },
   {
     id: '5',
@@ -53,6 +61,8 @@ const paymentHistory = [
     circleName: 'Emergency Pool',
     status: 'late',
     lateFee: 15,
+    daysOverdue: 5,
+    paidDate: null,
   },
   {
     id: '6',
@@ -61,17 +71,58 @@ const paymentHistory = [
     circleName: 'Gold Savings Circle',
     status: 'paid',
     lateFee: 0,
+    paidDate: '2025-01-15T11:00:00Z',
   },
 ];
 
 const circles = ['All Circles', 'Gold Savings Circle', 'Family Fund', 'Emergency Pool'];
 const statuses = ['All', 'Paid', 'Pending', 'Late'];
 
+interface PaymentRecord {
+  id: string;
+  date: string;
+  amount: number;
+  circleName: string;
+  status: string;
+  lateFee: number;
+  paidDate?: string | null;
+  daysOverdue?: number;
+}
+
 export default function PaymentHistory() {
   const router = useRouter();
+  const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>(defaultPaymentHistory);
   const [selectedCircle, setSelectedCircle] = useState('All Circles');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchPaymentHistory = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/payments/history/current-user-id`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          setPaymentHistory(data);
+        }
+      }
+    } catch (error) {
+      // Use default data if API fails
+      console.log('Using default payment history');
+    }
+  };
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchPaymentHistory();
+  }, []);
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchPaymentHistory();
+    setIsRefreshing(false);
+  };
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -86,6 +137,18 @@ export default function PaymentHistory() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const filteredPayments = paymentHistory.filter(payment => {
     const circleMatch = selectedCircle === 'All Circles' || payment.circleName === selectedCircle;
     const statusMatch = selectedStatus === 'All' || payment.status === selectedStatus.toLowerCase();
@@ -95,6 +158,9 @@ export default function PaymentHistory() {
   const totalPaid = paymentHistory
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + p.amount, 0);
+
+  const pendingCount = paymentHistory.filter(p => p.status === 'pending').length;
+  const lateCount = paymentHistory.filter(p => p.status === 'late').length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -124,13 +190,33 @@ export default function PaymentHistory() {
       {/* Summary Card */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Total Paid</Text>
-          <Text style={styles.summaryValue}>${totalPaid.toLocaleString()}</Text>
+          <View style={[styles.summaryIcon, { backgroundColor: '#DCFCE7' }]}>
+            <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          </View>
+          <View>
+            <Text style={styles.summaryValue}>${totalPaid.toLocaleString()}</Text>
+            <Text style={styles.summaryLabel}>Total Paid</Text>
+          </View>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Transactions</Text>
-          <Text style={styles.summaryValue}>{paymentHistory.length}</Text>
+          <View style={[styles.summaryIcon, { backgroundColor: '#FEF3C7' }]}>
+            <Ionicons name="time" size={18} color="#D97706" />
+          </View>
+          <View>
+            <Text style={styles.summaryValue}>{pendingCount}</Text>
+            <Text style={styles.summaryLabel}>Pending</Text>
+          </View>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
+          <View style={[styles.summaryIcon, { backgroundColor: '#FEE2E2' }]}>
+            <Ionicons name="alert-circle" size={18} color="#DC2626" />
+          </View>
+          <View>
+            <Text style={styles.summaryValue}>{lateCount}</Text>
+            <Text style={styles.summaryLabel}>Late</Text>
+          </View>
         </View>
       </View>
 
@@ -193,9 +279,25 @@ export default function PaymentHistory() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#3B82F6']}
+            tintColor="#3B82F6"
+          />
+        }
       >
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={styles.loadingText}>Loading payments...</Text>
+          </View>
+        )}
+
         {/* Empty State */}
-        {filteredPayments.length === 0 ? (
+        {!isLoading && filteredPayments.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
               <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
@@ -204,38 +306,61 @@ export default function PaymentHistory() {
             <Text style={styles.emptyText}>
               Your payment activity will appear here once you make your first contribution
             </Text>
+            <TouchableOpacity 
+              style={styles.emptyActionBtn}
+              onPress={() => router.push('/')}
+            >
+              <Text style={styles.emptyActionBtnText}>Go to Dashboard</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           /* Payment List */
-          filteredPayments.map((payment, index) => {
-            const statusStyle = getStatusStyle(payment.status);
-            return (
-              <TouchableOpacity key={payment.id} style={styles.paymentCard} activeOpacity={0.7}>
-                <View style={styles.paymentLeft}>
-                  <View style={[styles.paymentIcon, { backgroundColor: statusStyle.bg }]}>
-                    <Ionicons name={statusStyle.icon as any} size={20} color={statusStyle.text} />
+          <>
+            <View style={styles.listHeader}>
+              <Text style={styles.listHeaderText}>
+                {filteredPayments.length} transaction{filteredPayments.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            {filteredPayments.map((payment, index) => {
+              const statusStyle = getStatusStyle(payment.status);
+              return (
+                <TouchableOpacity key={payment.id} style={styles.paymentCard} activeOpacity={0.7}>
+                  <View style={styles.paymentLeft}>
+                    <View style={[styles.paymentIcon, { backgroundColor: statusStyle.bg }]}>
+                      <Ionicons name={statusStyle.icon as any} size={20} color={statusStyle.text} />
+                    </View>
+                    <View style={styles.paymentInfo}>
+                      <Text style={styles.paymentCircle}>{payment.circleName}</Text>
+                      <Text style={styles.paymentDate}>{payment.date}</Text>
+                      {payment.paidDate && payment.status === 'paid' && (
+                        <Text style={styles.paidDateText}>
+                          Paid {formatDate(payment.paidDate)}
+                        </Text>
+                      )}
+                      {payment.daysOverdue && payment.status === 'late' && (
+                        <Text style={styles.overdueText}>
+                          {payment.daysOverdue} days overdue
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.paymentInfo}>
-                    <Text style={styles.paymentCircle}>{payment.circleName}</Text>
-                    <Text style={styles.paymentDate}>{payment.date}</Text>
-                  </View>
-                </View>
-                <View style={styles.paymentRight}>
-                  <Text style={styles.paymentAmount}>
-                    ${payment.amount.toLocaleString()}
-                  </Text>
-                  {payment.lateFee > 0 && (
-                    <Text style={styles.lateFeeText}>+${payment.lateFee} fee</Text>
-                  )}
-                  <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                    <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                      {statusStyle.label}
+                  <View style={styles.paymentRight}>
+                    <Text style={styles.paymentAmount}>
+                      ${payment.amount.toLocaleString()}
                     </Text>
+                    {payment.lateFee > 0 && (
+                      <Text style={styles.lateFeeText}>+${payment.lateFee} fee</Text>
+                    )}
+                    <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                      <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                        {statusStyle.label}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })
+                </TouchableOpacity>
+              );
+            })}
+          </>
         )}
 
         <View style={styles.bottomSpacer} />
@@ -285,7 +410,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -294,15 +419,24 @@ const styles = StyleSheet.create({
   },
   summaryItem: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   summaryLabel: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#64748B',
-    marginBottom: 4,
   },
   summaryValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: '#1E293B',
   },
@@ -422,6 +556,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94A3B8',
   },
+  paidDateText: {
+    fontSize: 11,
+    color: '#16A34A',
+    marginTop: 2,
+  },
+  overdueText: {
+    fontSize: 11,
+    color: '#DC2626',
+    marginTop: 2,
+  },
   paymentRight: {
     alignItems: 'flex-end',
   },
@@ -444,6 +588,35 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  loadingState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  emptyActionBtn: {
+    marginTop: 16,
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  emptyActionBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  listHeader: {
+    marginBottom: 12,
+  },
+  listHeaderText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
   },
   bottomSpacer: {
     height: 40,
