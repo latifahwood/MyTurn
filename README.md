@@ -106,5 +106,3 @@ AI Data Analyst | Fintech Builder
 ## Vision
 
 MyTurn aims to transform traditional community savings systems into scalable, data-driven financial platforms, starting in the Caribbean and expanding globally.
-
----# Here are your Instructions
