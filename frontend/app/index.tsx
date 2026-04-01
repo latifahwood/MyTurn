@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,15 +13,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+// Toggle this to see empty state
+const SHOW_EMPTY_STATE = false;
+
 // Mock data for the dashboard
 const nextPayment = {
   amount: 500,
   groupName: 'Gold Savings Circle',
   dueDate: 'Apr 15, 2025',
-  daysRemaining: 3,
+  daysRemaining: 2, // Changed to 2 to show reminder
+  daysOverdue: 0,
 };
 
-const circles = [
+const circles = SHOW_EMPTY_STATE ? [] : [
   {
     id: '1',
     name: 'Gold Savings',
@@ -58,9 +62,9 @@ const circles = [
 ];
 
 const stats = {
-  totalMembers: 24,
-  totalValue: 7800,
-  overdueMembers: 1,
+  totalMembers: SHOW_EMPTY_STATE ? 0 : 24,
+  totalValue: SHOW_EMPTY_STATE ? 0 : 7800,
+  overdueMembers: SHOW_EMPTY_STATE ? 0 : 1,
 };
 
 export default function FintechDashboard() {
@@ -72,6 +76,14 @@ export default function FintechDashboard() {
 
   const navigateToCreateCircle = () => {
     router.push('/create-circle');
+  };
+
+  const navigateToPaymentHistory = () => {
+    router.push('/payment-history');
+  };
+
+  const navigateToSettings = () => {
+    router.push('/notification-settings');
   };
 
   return (
@@ -88,24 +100,85 @@ export default function FintechDashboard() {
             <Text style={styles.greeting}>Good Morning</Text>
             <Text style={styles.userName}>Sarah Johnson</Text>
           </View>
-          <TouchableOpacity style={styles.notificationBtn}>
-            <Ionicons name="notifications-outline" size={24} color="#1E293B" />
-            <View style={styles.notificationBadge} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.iconBtn} onPress={navigateToPaymentHistory}>
+              <Ionicons name="time-outline" size={22} color="#64748B" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.notificationBtn} onPress={navigateToSettings}>
+              <Ionicons name="notifications-outline" size={24} color="#1E293B" />
+              <View style={styles.notificationBadge} />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Due Date Warning Banner */}
-        {nextPayment.daysRemaining <= 3 && (
-          <LinearGradient
-            colors={['#F97316', '#EF4444']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.warningBanner}
-          >
-            <Ionicons name="warning" size={18} color="#FFF" />
-            <Text style={styles.warningText}>Due in {nextPayment.daysRemaining} day{nextPayment.daysRemaining !== 1 ? 's' : ''}</Text>
-          </LinearGradient>
+        {/* Payment Reminder Banner */}
+        {circles.length > 0 && nextPayment.daysRemaining <= 2 && nextPayment.daysRemaining > 0 && (
+          <TouchableOpacity style={styles.reminderBanner} activeOpacity={0.8}>
+            <View style={styles.reminderIconContainer}>
+              <Ionicons name="calendar" size={20} color="#D97706" />
+            </View>
+            <View style={styles.reminderContent}>
+              <Text style={styles.reminderTitle}>Payment due in {nextPayment.daysRemaining} day{nextPayment.daysRemaining !== 1 ? 's' : ''}</Text>
+              <Text style={styles.reminderText}>${nextPayment.amount} to {nextPayment.groupName}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#D97706" />
+          </TouchableOpacity>
         )}
+
+        {/* Overdue Alert Banner */}
+        {circles.length > 0 && nextPayment.daysOverdue > 0 && (
+          <TouchableOpacity style={styles.overdueBanner} activeOpacity={0.8}>
+            <View style={styles.overdueIconContainer}>
+              <Ionicons name="alert-circle" size={20} color="#DC2626" />
+            </View>
+            <View style={styles.reminderContent}>
+              <Text style={styles.overdueTitle}>You are {nextPayment.daysOverdue} days late</Text>
+              <Text style={styles.overdueText}>Pay now to avoid additional fees</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#DC2626" />
+          </TouchableOpacity>
+        )}
+
+        {/* Empty State - No Circles */}
+        {circles.length === 0 ? (
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="people-outline" size={64} color="#CBD5E1" />
+            </View>
+            <Text style={styles.emptyTitle}>No circles yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Join or create a savings circle to start building your financial future together
+            </Text>
+            <TouchableOpacity 
+              activeOpacity={0.8} 
+              style={styles.createFirstCircleBtn}
+              onPress={navigateToCreateCircle}
+            >
+              <LinearGradient
+                colors={['#3B82F6', '#2563EB']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.createFirstCircleBtnGradient}
+              >
+                <Ionicons name="add-circle" size={22} color="#FFF" />
+                <Text style={styles.createFirstCircleBtnText}>Create your first circle</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Due Date Warning Banner */}
+            {nextPayment.daysRemaining <= 3 && nextPayment.daysRemaining > 0 && (
+              <LinearGradient
+                colors={['#F97316', '#EF4444']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.warningBanner}
+              >
+                <Ionicons name="warning" size={18} color="#FFF" />
+                <Text style={styles.warningText}>Due in {nextPayment.daysRemaining} day{nextPayment.daysRemaining !== 1 ? 's' : ''}</Text>
+              </LinearGradient>
+            )}
 
         {/* Next Payment Card */}
         <View style={styles.paymentCard}>
@@ -247,6 +320,8 @@ export default function FintechDashboard() {
           <Ionicons name="add-circle-outline" size={24} color="#3B82F6" />
           <Text style={styles.addCircleText}>Join or Create a Circle</Text>
         </TouchableOpacity>
+          </>
+        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -283,6 +358,24 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginTop: 2,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   notificationBtn: {
     width: 48,
     height: 48,
@@ -304,6 +397,110 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#EF4444',
+  },
+  reminderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  reminderIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  reminderContent: {
+    flex: 1,
+  },
+  reminderTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  reminderText: {
+    fontSize: 13,
+    color: '#B45309',
+  },
+  overdueBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  overdueIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  overdueTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+    marginBottom: 2,
+  },
+  overdueText: {
+    fontSize: 13,
+    color: '#B91C1C',
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 30,
+  },
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 10,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  createFirstCircleBtn: {
+    width: '100%',
+  },
+  createFirstCircleBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 14,
+    gap: 10,
+  },
+  createFirstCircleBtnText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFF',
   },
   warningBanner: {
     flexDirection: 'row',
