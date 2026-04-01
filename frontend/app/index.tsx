@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,14 +16,52 @@ import { useRouter } from 'expo-router';
 // Toggle this to see empty state
 const SHOW_EMPTY_STATE = false;
 
-// Mock data for the dashboard
-const nextPayment = {
-  amount: 500,
-  groupName: 'Gold Savings Circle',
-  dueDate: 'Apr 15, 2025',
-  daysRemaining: 2, // Changed to 2 to show reminder
-  daysOverdue: 0,
+// Helper function to calculate days until due or days overdue
+const calculatePaymentStatus = (dueDateStr: string) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Parse the due date (format: "Apr 15, 2025")
+  const dueDate = new Date(dueDateStr);
+  dueDate.setHours(0, 0, 0, 0);
+  
+  const diffTime = dueDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    return { isOverdue: true, daysOverdue: Math.abs(diffDays), daysRemaining: 0 };
+  } else {
+    return { isOverdue: false, daysOverdue: 0, daysRemaining: diffDays };
+  }
 };
+
+// Mock data for the dashboard - using a date in the near future for demo
+const getNextPaymentData = () => {
+  // For demo: set due date to 2 days from now
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 2);
+  const dueDateStr = futureDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  return {
+    amount: 500,
+    groupName: 'Gold Savings Circle',
+    dueDate: dueDateStr,
+    ...calculatePaymentStatus(dueDateStr),
+  };
+};
+
+// For testing overdue scenario, uncomment below:
+// const getNextPaymentData = () => {
+//   const pastDate = new Date();
+//   pastDate.setDate(pastDate.getDate() - 3);
+//   const dueDateStr = pastDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+//   return {
+//     amount: 500,
+//     groupName: 'Gold Savings Circle',
+//     dueDate: dueDateStr,
+//     ...calculatePaymentStatus(dueDateStr),
+//   };
+// };
 
 const circles = SHOW_EMPTY_STATE ? [] : [
   {
@@ -69,6 +107,9 @@ const stats = {
 
 export default function FintechDashboard() {
   const router = useRouter();
+  
+  // Calculate payment status dynamically
+  const nextPayment = useMemo(() => getNextPaymentData(), []);
 
   const navigateToCircle = () => {
     router.push('/circle-details');
@@ -84,6 +125,10 @@ export default function FintechDashboard() {
 
   const navigateToSettings = () => {
     router.push('/notification-settings');
+  };
+
+  const navigateToPayment = () => {
+    router.push('/payment');
   };
 
   return (
@@ -111,9 +156,9 @@ export default function FintechDashboard() {
           </View>
         </View>
 
-        {/* Payment Reminder Banner */}
-        {circles.length > 0 && nextPayment.daysRemaining <= 2 && nextPayment.daysRemaining > 0 && (
-          <TouchableOpacity style={styles.reminderBanner} activeOpacity={0.8}>
+        {/* Payment Reminder Banner - Due Soon */}
+        {circles.length > 0 && !nextPayment.isOverdue && nextPayment.daysRemaining <= 2 && nextPayment.daysRemaining > 0 && (
+          <TouchableOpacity style={styles.reminderBanner} activeOpacity={0.8} onPress={navigateToPayment}>
             <View style={styles.reminderIconContainer}>
               <Ionicons name="calendar" size={20} color="#D97706" />
             </View>
@@ -125,17 +170,35 @@ export default function FintechDashboard() {
           </TouchableOpacity>
         )}
 
+        {/* Payment Due Today Banner */}
+        {circles.length > 0 && !nextPayment.isOverdue && nextPayment.daysRemaining === 0 && (
+          <TouchableOpacity style={styles.dueTodayBanner} activeOpacity={0.8} onPress={navigateToPayment}>
+            <View style={styles.dueTodayIconContainer}>
+              <Ionicons name="warning" size={20} color="#EA580C" />
+            </View>
+            <View style={styles.reminderContent}>
+              <Text style={styles.dueTodayTitle}>Payment due today!</Text>
+              <Text style={styles.dueTodayText}>${nextPayment.amount} to {nextPayment.groupName}</Text>
+            </View>
+            <View style={styles.payNowBadge}>
+              <Text style={styles.payNowBadgeText}>Pay Now</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Overdue Alert Banner */}
-        {circles.length > 0 && nextPayment.daysOverdue > 0 && (
-          <TouchableOpacity style={styles.overdueBanner} activeOpacity={0.8}>
+        {circles.length > 0 && nextPayment.isOverdue && nextPayment.daysOverdue > 0 && (
+          <TouchableOpacity style={styles.overdueBanner} activeOpacity={0.8} onPress={navigateToPayment}>
             <View style={styles.overdueIconContainer}>
               <Ionicons name="alert-circle" size={20} color="#DC2626" />
             </View>
             <View style={styles.reminderContent}>
-              <Text style={styles.overdueTitle}>You are {nextPayment.daysOverdue} days late</Text>
+              <Text style={styles.overdueTitle}>You are {nextPayment.daysOverdue} day{nextPayment.daysOverdue !== 1 ? 's' : ''} late</Text>
               <Text style={styles.overdueText}>Pay now to avoid additional fees</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#DC2626" />
+            <View style={styles.urgentBadge}>
+              <Text style={styles.urgentBadgeText}>Urgent</Text>
+            </View>
           </TouchableOpacity>
         )}
 
@@ -458,6 +521,57 @@ const styles = StyleSheet.create({
   overdueText: {
     fontSize: 13,
     color: '#B91C1C',
+  },
+  dueTodayBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FDBA74',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  dueTodayIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFEDD5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  dueTodayTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#EA580C',
+    marginBottom: 2,
+  },
+  dueTodayText: {
+    fontSize: 13,
+    color: '#C2410C',
+  },
+  payNowBadge: {
+    backgroundColor: '#EA580C',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  payNowBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  urgentBadge: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  urgentBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFF',
   },
   emptyStateContainer: {
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,36 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+
+// Helper function to calculate payment status
+const calculatePaymentStatus = (dueDateStr: string) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = new Date(dueDateStr);
+  dueDate.setHours(0, 0, 0, 0);
+  const diffTime = dueDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    return { isOverdue: true, daysOverdue: Math.abs(diffDays), daysRemaining: 0 };
+  } else {
+    return { isOverdue: false, daysOverdue: 0, daysRemaining: diffDays };
+  }
+};
+
+// Get current user's payment status
+const getCurrentUserPayment = () => {
+  // For demo: due in 2 days
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 2);
+  const dueDateStr = futureDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  return {
+    amount: 500,
+    dueDate: dueDateStr,
+    ...calculatePaymentStatus(dueDateStr),
+  };
+};
 
 // Mock data for the circle details
 const circleData = {
@@ -112,6 +142,9 @@ const unpaidMembers = members.filter(m => m.status === 'pending' || m.status ===
 
 export default function CircleDetails() {
   const router = useRouter();
+  
+  // Calculate current user's payment status
+  const currentUserPayment = useMemo(() => getCurrentUserPayment(), []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -180,6 +213,46 @@ export default function CircleDetails() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Payment Due Soon Banner */}
+        {!currentUserPayment.isOverdue && currentUserPayment.daysRemaining <= 2 && currentUserPayment.daysRemaining > 0 && (
+          <TouchableOpacity 
+            style={styles.reminderBanner} 
+            activeOpacity={0.8}
+            onPress={() => router.push('/payment')}
+          >
+            <View style={styles.reminderIconContainer}>
+              <Ionicons name="calendar" size={18} color="#D97706" />
+            </View>
+            <View style={styles.reminderContent}>
+              <Text style={styles.reminderTitle}>Payment due in {currentUserPayment.daysRemaining} day{currentUserPayment.daysRemaining !== 1 ? 's' : ''}</Text>
+              <Text style={styles.reminderText}>${currentUserPayment.amount} contribution</Text>
+            </View>
+            <View style={styles.payNowSmallBadge}>
+              <Text style={styles.payNowSmallBadgeText}>Pay</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Overdue Banner */}
+        {currentUserPayment.isOverdue && currentUserPayment.daysOverdue > 0 && (
+          <TouchableOpacity 
+            style={styles.overdueBanner} 
+            activeOpacity={0.8}
+            onPress={() => router.push('/payment')}
+          >
+            <View style={styles.overdueIconContainer}>
+              <Ionicons name="alert-circle" size={18} color="#DC2626" />
+            </View>
+            <View style={styles.reminderContent}>
+              <Text style={styles.overdueTitle}>You are {currentUserPayment.daysOverdue} day{currentUserPayment.daysOverdue !== 1 ? 's' : ''} late</Text>
+              <Text style={styles.overdueText}>Late fees may apply</Text>
+            </View>
+            <View style={styles.urgentSmallBadge}>
+              <Text style={styles.urgentSmallBadgeText}>Pay Now</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Stats Cards Row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
@@ -884,5 +957,88 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#3B82F6',
+  },
+  reminderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  reminderIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  reminderContent: {
+    flex: 1,
+  },
+  reminderTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  reminderText: {
+    fontSize: 12,
+    color: '#B45309',
+  },
+  payNowSmallBadge: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  payNowSmallBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  overdueBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  overdueIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  overdueTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
+    marginBottom: 2,
+  },
+  overdueText: {
+    fontSize: 12,
+    color: '#B91C1C',
+  },
+  urgentSmallBadge: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  urgentSmallBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFF',
   },
 });
