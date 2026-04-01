@@ -9,12 +9,12 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SuccessModal, ErrorModal, LoadingOverlay } from '../components/FeedbackComponents';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -36,6 +36,11 @@ export default function JoinCircle() {
     adminName: string;
   } | null>(null);
   const [error, setError] = useState('');
+  
+  // Feedback states
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleFindCircle = async () => {
     if (inviteCode.length < 6) {
@@ -101,34 +106,31 @@ export default function JoinCircle() {
       const data = await response.json();
 
       if (response.ok || data.success) {
-        Alert.alert(
-          'Welcome! 🎉',
-          `You've joined ${circlePreview.name} successfully!`,
-          [
-            {
-              text: 'Go to Dashboard',
-              onPress: () => router.replace('/'),
-            },
-          ]
-        );
+        setShowSuccessModal(true);
       } else {
-        Alert.alert('Error', data.detail || 'Failed to join circle. Please try again.');
+        setErrorMessage(data.detail || 'Failed to join circle. Please try again.');
+        setShowErrorModal(true);
       }
     } catch (err) {
       // For demo purposes, show success
-      Alert.alert(
-        'Welcome! 🎉',
-        `You've joined ${circlePreview.name} successfully!`,
-        [
-          {
-            text: 'Go to Dashboard',
-            onPress: () => router.replace('/'),
-          },
-        ]
-      );
+      setShowSuccessModal(true);
     } finally {
       setIsJoining(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    router.replace('/');
+  };
+
+  const handleErrorClose = () => {
+    setShowErrorModal(false);
+  };
+
+  const handleErrorRetry = () => {
+    setShowErrorModal(false);
+    handleJoinCircle();
   };
 
   const getFrequencyLabel = (freq: string) => {
@@ -143,6 +145,28 @@ export default function JoinCircle() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Welcome!"
+        message={`You've joined ${circlePreview?.name || 'the circle'} successfully! Start contributing to your savings circle.`}
+        buttonText="Go to Dashboard"
+        onClose={handleSuccessClose}
+      />
+      
+      {/* Error Modal */}
+      <ErrorModal
+        visible={showErrorModal}
+        title="Unable to Join"
+        message={errorMessage}
+        buttonText="Try Again"
+        onRetry={handleErrorRetry}
+        onClose={handleErrorClose}
+      />
+      
+      {/* Loading Overlay */}
+      <LoadingOverlay visible={isJoining} message="Joining circle..." />
       
       {/* Header */}
       <View style={styles.header}>

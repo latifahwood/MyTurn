@@ -8,12 +8,12 @@ import {
   StatusBar,
   Platform,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { ErrorModal, LoadingOverlay } from '../components/FeedbackComponents';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -41,6 +41,10 @@ export default function Payment() {
   const router = useRouter();
   const [selectedMethod, setSelectedMethod] = useState('bank');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Feedback states
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const totalAmount = paymentData.hasLateFee 
     ? paymentData.contributionAmount + paymentData.lateFee 
@@ -78,7 +82,8 @@ export default function Payment() {
           },
         });
       } else {
-        Alert.alert('Payment Failed', data.message || 'Unable to process payment. Please try again.');
+        setErrorMessage(data.message || 'Unable to process payment. Please check your payment method and try again.');
+        setShowErrorModal(true);
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -97,9 +102,31 @@ export default function Payment() {
     }
   };
 
+  const handleErrorClose = () => {
+    setShowErrorModal(false);
+  };
+
+  const handleErrorRetry = () => {
+    setShowErrorModal(false);
+    handlePayment();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      
+      {/* Error Modal */}
+      <ErrorModal
+        visible={showErrorModal}
+        title="Payment Failed"
+        message={errorMessage}
+        buttonText="Try Again"
+        onRetry={handleErrorRetry}
+        onClose={handleErrorClose}
+      />
+      
+      {/* Loading Overlay */}
+      <LoadingOverlay visible={isProcessing} message="Processing payment..." />
       
       {/* Header */}
       <View style={styles.header}>

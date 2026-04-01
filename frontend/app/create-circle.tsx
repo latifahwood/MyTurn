@@ -10,12 +10,12 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { SuccessModal, ErrorModal, LoadingOverlay } from '../components/FeedbackComponents';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -53,10 +53,16 @@ export default function CreateCircle() {
   const [gracePeriod, setGracePeriod] = useState('3');
   const [lateFeeAmount, setLateFeeAmount] = useState('25');
   const [isCreating, setIsCreating] = useState(false);
+  
+  // Feedback states
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleCreateCircle = async () => {
     if (!circleName || !contributionAmount || !memberCount) {
-      Alert.alert('Missing Information', 'Please fill in all required fields');
+      setErrorMessage('Please fill in all required fields (Circle Name, Contribution Amount, and Number of Members)');
+      setShowErrorModal(true);
       return;
     }
 
@@ -84,34 +90,31 @@ export default function CreateCircle() {
       const data = await response.json();
 
       if (data.success || response.ok) {
-        Alert.alert(
-          'Circle Created! 🎉',
-          'Now invite members to join your savings circle.',
-          [
-            {
-              text: 'Invite Members',
-              onPress: () => router.replace('/invite-members'),
-            },
-          ]
-        );
+        setShowSuccessModal(true);
       } else {
-        Alert.alert('Error', data.detail || 'Failed to create circle');
+        setErrorMessage(data.detail || 'Failed to create circle. Please try again.');
+        setShowErrorModal(true);
       }
     } catch (error) {
-      // For demo, still navigate
-      Alert.alert(
-        'Circle Created! 🎉',
-        'Now invite members to join your savings circle.',
-        [
-          {
-            text: 'Invite Members',
-            onPress: () => router.replace('/invite-members'),
-          },
-        ]
-      );
+      // For demo, show success even if API fails
+      setShowSuccessModal(true);
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    router.replace('/invite-members');
+  };
+
+  const handleErrorClose = () => {
+    setShowErrorModal(false);
+  };
+
+  const handleErrorRetry = () => {
+    setShowErrorModal(false);
+    handleCreateCircle();
   };
 
   const handleAddMember = () => {
@@ -141,6 +144,28 @@ export default function CreateCircle() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title="Circle Created!"
+        message="Your savings circle has been created successfully. Now invite members to join."
+        buttonText="Invite Members"
+        onClose={handleSuccessClose}
+      />
+      
+      {/* Error Modal */}
+      <ErrorModal
+        visible={showErrorModal}
+        title="Oops!"
+        message={errorMessage}
+        buttonText="Try Again"
+        onRetry={handleErrorRetry}
+        onClose={handleErrorClose}
+      />
+      
+      {/* Loading Overlay */}
+      <LoadingOverlay visible={isCreating} message="Creating your circle..." />
       
       {/* Header */}
       <View style={styles.header}>

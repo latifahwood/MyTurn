@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,19 @@ import {
   TouchableOpacity,
   StatusBar,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
+
+// Role type
+type UserRole = 'admin' | 'member';
+
+// Current circle ID (in real app, would come from route params)
+const CURRENT_CIRCLE_ID = 'circle-1';
 
 // Helper function to calculate payment status
 const calculatePaymentStatus = (dueDateStr: string) => {
@@ -45,6 +53,7 @@ const getCurrentUserPayment = () => {
 
 // Mock data for the circle details
 const circleData = {
+  id: 'circle-1',
   name: 'Gold Savings Circle',
   memberCount: 8,
   monthlyContribution: 500,
@@ -142,6 +151,11 @@ const unpaidMembers = members.filter(m => m.status === 'pending' || m.status ===
 
 export default function CircleDetails() {
   const router = useRouter();
+  const { user, getRoleForCircle, isAdminOfCircle } = useAuth();
+  
+  // Get role from AuthContext
+  const currentUserRole = getRoleForCircle(CURRENT_CIRCLE_ID) || 'member';
+  const isAdmin = isAdminOfCircle(CURRENT_CIRCLE_ID);
   
   // Calculate current user's payment status
   const currentUserPayment = useMemo(() => getCurrentUserPayment(), []);
@@ -185,6 +199,26 @@ export default function CircleDetails() {
     return colors[index];
   };
 
+  const handleSettings = () => {
+    if (isAdmin) {
+      Alert.alert(
+        'Circle Settings',
+        'Admin settings would open here',
+        [
+          { text: 'Edit Rules', onPress: () => console.log('Edit rules') },
+          { text: 'Manage Members', onPress: () => console.log('Manage members') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } else {
+      Alert.alert('Member Options', 'What would you like to do?', [
+        { text: 'View Rules', onPress: () => console.log('View rules') },
+        { text: 'Leave Circle', onPress: () => console.log('Leave circle'), style: 'destructive' },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -198,13 +232,31 @@ export default function CircleDetails() {
           <Ionicons name="arrow-back" size={24} color="#1E293B" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.circleName}>{circleData.name}</Text>
+          <View style={styles.headerTitleRow}>
+            <Text style={styles.circleName}>{circleData.name}</Text>
+            <View style={[
+              styles.roleBadge, 
+              { backgroundColor: isAdmin ? '#FEF3C7' : '#EFF6FF' }
+            ]}>
+              <Ionicons 
+                name={isAdmin ? 'shield-checkmark' : 'person'} 
+                size={10} 
+                color={isAdmin ? '#D97706' : '#3B82F6'} 
+              />
+              <Text style={[
+                styles.roleBadgeText, 
+                { color: isAdmin ? '#D97706' : '#3B82F6' }
+              ]}>
+                {isAdmin ? 'Admin' : 'Member'}
+              </Text>
+            </View>
+          </View>
           <Text style={styles.circleSummary}>
             {circleData.memberCount} members • ${circleData.monthlyContribution}/mo
           </Text>
         </View>
-        <TouchableOpacity style={styles.moreBtn}>
-          <Ionicons name="ellipsis-vertical" size={20} color="#64748B" />
+        <TouchableOpacity style={styles.moreBtn} onPress={handleSettings}>
+          <Ionicons name={isAdmin ? 'settings-outline' : 'ellipsis-vertical'} size={20} color="#64748B" />
         </TouchableOpacity>
       </View>
 
@@ -442,15 +494,44 @@ export default function CircleDetails() {
           );
         })}
 
-        {/* Invite Members Button */}
-        <TouchableOpacity 
-          style={styles.inviteBtn} 
-          activeOpacity={0.7}
-          onPress={() => router.push('/invite-members')}
-        >
-          <Ionicons name="person-add-outline" size={20} color="#3B82F6" />
-          <Text style={styles.inviteBtnText}>Invite Members</Text>
-        </TouchableOpacity>
+        {/* Invite Members Button - Admin Only */}
+        {isAdmin && (
+          <TouchableOpacity 
+            style={styles.inviteBtn} 
+            activeOpacity={0.7}
+            onPress={() => router.push('/invite-members')}
+          >
+            <Ionicons name="person-add-outline" size={20} color="#3B82F6" />
+            <Text style={styles.inviteBtnText}>Invite Members</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Admin Actions Section */}
+        {isAdmin && (
+          <View style={styles.adminSection}>
+            <Text style={styles.adminSectionTitle}>Admin Actions</Text>
+            <View style={styles.adminActions}>
+              <TouchableOpacity style={styles.adminActionBtn}>
+                <View style={[styles.adminActionIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="settings-outline" size={18} color="#D97706" />
+                </View>
+                <Text style={styles.adminActionText}>Edit Rules</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.adminActionBtn}>
+                <View style={[styles.adminActionIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Ionicons name="people-outline" size={18} color="#DC2626" />
+                </View>
+                <Text style={styles.adminActionText}>Manage Members</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.adminActionBtn}>
+                <View style={[styles.adminActionIcon, { backgroundColor: '#DCFCE7' }]}>
+                  <Ionicons name="stats-chart" size={18} color="#16A34A" />
+                </View>
+                <Text style={styles.adminActionText}>View Reports</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
