@@ -369,6 +369,16 @@ export default function CircleDetails() {
           );
         })}
 
+        {/* Invite Members Button */}
+        <TouchableOpacity 
+          style={styles.inviteBtn} 
+          activeOpacity={0.7}
+          onPress={() => router.push('/invite-members')}
+        >
+          <Ionicons name="person-add-outline" size={20} color="#3B82F6" />
+          <Text style={styles.inviteBtnText}>Invite Members</Text>
+        </TouchableOpacity>
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
@@ -857,5 +867,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#FFF',
+  },
+  inviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 8,
+    gap: 8,
+  },
+  inviteBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#3B82F6',
   },
 });
