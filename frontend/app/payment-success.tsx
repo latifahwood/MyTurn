@@ -165,9 +165,12 @@ export default function PaymentSuccess() {
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.viewReceiptBtn}>
-          <Ionicons name="receipt-outline" size={18} color="#3B82F6" />
-          <Text style={styles.viewReceiptText}>View Receipt</Text>
+        <TouchableOpacity style={styles.viewReceiptBtn} onPress={() => {}}>
+          <Ionicons name="receipt-outline" size={18} color="#94A3B8" />
+          <Text style={styles.viewReceiptTextDisabled}>View Receipt</Text>
+          <View style={styles.comingSoonBadge}>
+            <Text style={styles.comingSoonText}>Coming Soon</Text>
+          </View>
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
@@ -377,5 +380,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#3B82F6',
     fontWeight: '600',
+  },
+  viewReceiptTextDisabled: {
+    fontSize: 15,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  comingSoonBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
   },
 });

@@ -73,20 +73,33 @@ const mockMemberships: CircleMembership[] = [
 
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(mockUser);
+  const [user, setUser] = useState<User | null>(null); // Start without a user - require login
   const [isLoading, setIsLoading] = useState(false);
-  const [memberships, setMemberships] = useState<CircleMembership[]>(mockMemberships);
+  const [memberships, setMemberships] = useState<CircleMembership[]>([]);
 
   const isAuthenticated = !!user;
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setUser(mockUser);
-    setMemberships(mockMemberships);
-    setIsLoading(false);
-    return true;
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // For demo: accept any valid-looking credentials
+      // In production, this would call your backend auth API
+      setUser({
+        id: 'user-' + Date.now(),
+        name: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        email: email,
+        phone: '',
+      });
+      // Assign demo memberships after login
+      setMemberships(mockMemberships);
+      return true;
+    } catch (error) {
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {

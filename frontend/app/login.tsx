@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StatusBar,
   Platform,
   KeyboardAvoidingView,
@@ -15,28 +16,53 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
+import { ErrorModal } from '../components/FeedbackComponents';
 
 export default function Login() {
   const router = useRouter();
+  const { login, isLoading: authLoading } = useAuth();
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleLogin = async () => {
+    if (!isFormValid) return;
+    
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const success = await login(emailOrPhone, password);
+      if (success) {
+        // Navigation is handled by _layout.tsx auth guard
+      } else {
+        setErrorMessage('Invalid credentials. Please try again.');
+        setShowErrorModal(true);
+      }
+    } catch (error) {
+      setErrorMessage('Something went wrong. Please try again.');
+      setShowErrorModal(true);
+    } finally {
       setIsLoading(false);
-      router.replace('/');
-    }, 1500);
+    }
   };
 
-  const isFormValid = emailOrPhone && password.length >= 6;
+  const isFormValid = emailOrPhone.length > 0 && password.length >= 6;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      
+      {/* Error Modal */}
+      <ErrorModal
+        visible={showErrorModal}
+        title="Login Failed"
+        message={errorMessage}
+        buttonText="Try Again"
+        onClose={() => setShowErrorModal(false)}
+      />
       
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -109,11 +135,15 @@ export default function Login() {
             </View>
 
             {/* Login Button */}
-            <TouchableOpacity 
-              activeOpacity={0.8} 
-              style={[styles.loginBtnContainer, !isFormValid && styles.btnDisabled]}
+            <Pressable 
+              style={({ pressed }) => [
+                styles.loginBtnContainer, 
+                !isFormValid && styles.btnDisabled,
+                pressed && { opacity: 0.9 }
+              ]}
               onPress={handleLogin}
               disabled={!isFormValid || isLoading}
+              accessibilityRole="button"
             >
               <LinearGradient
                 colors={isFormValid ? ['#3B82F6', '#2563EB'] : ['#94A3B8', '#64748B']}
@@ -127,7 +157,7 @@ export default function Login() {
                   <Text style={styles.loginBtnText}>Log In</Text>
                 )}
               </LinearGradient>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Divider */}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
 
 // Toggle this to see empty state
 const SHOW_EMPTY_STATE = false;
@@ -107,9 +109,37 @@ const stats = {
 
 export default function FintechDashboard() {
   const router = useRouter();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  
+  // Redirect to login if not authenticated
+  if (!isLoading && !isAuthenticated) {
+    return <Redirect href="/login" />;
+  }
+  
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+        </View>
+      </SafeAreaView>
+    );
+  }
   
   // Calculate payment status dynamically
   const nextPayment = useMemo(() => getNextPaymentData(), []);
+  
+  // Get user's display name
+  const displayName = user?.name || 'User';
+  
+  // Get greeting based on time
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   const navigateToCircle = () => {
     router.push('/circle-details');
@@ -142,8 +172,8 @@ export default function FintechDashboard() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Good Morning</Text>
-            <Text style={styles.userName}>Sarah Johnson</Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.userName}>{displayName}</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.iconBtn} onPress={navigateToPaymentHistory}>

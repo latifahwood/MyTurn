@@ -15,30 +15,55 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
+import { SuccessModal, ErrorModal } from '../components/FeedbackComponents';
 
 export default function SignUp() {
   const router = useRouter();
+  const { signup, isLoading: authLoading } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSignUp = async () => {
+    if (!isFormValid) return;
+    
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const success = await signup(fullName, email, phone, password);
+      if (success) {
+        // Navigation is handled by _layout.tsx auth guard
+      } else {
+        setErrorMessage('Failed to create account. Please try again.');
+        setShowErrorModal(true);
+      }
+    } catch (error) {
+      setErrorMessage('Something went wrong. Please try again.');
+      setShowErrorModal(true);
+    } finally {
       setIsLoading(false);
-      router.replace('/');
-    }, 1500);
+    }
   };
 
-  const isFormValid = fullName && email && phone && password.length >= 6;
+  const isFormValid = fullName.length > 0 && email.length > 0 && phone.length > 0 && password.length >= 6;
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      
+      {/* Error Modal */}
+      <ErrorModal
+        visible={showErrorModal}
+        title="Signup Failed"
+        message={errorMessage}
+        buttonText="Try Again"
+        onClose={() => setShowErrorModal(false)}
+      />
       
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

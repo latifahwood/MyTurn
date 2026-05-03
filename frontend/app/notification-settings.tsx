@@ -158,27 +158,31 @@ export default function NotificationSettings() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Settings</Text>
           
-          <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuItemDisabled}>
             <View style={[styles.settingIcon, { backgroundColor: '#F1F5F9' }]}>
-              <Ionicons name="moon-outline" size={22} color="#64748B" />
+              <Ionicons name="moon-outline" size={22} color="#94A3B8" />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Quiet Hours</Text>
+              <Text style={styles.settingTitleDisabled}>Quiet Hours</Text>
               <Text style={styles.settingDescription}>10:00 PM - 8:00 AM</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
-          </TouchableOpacity>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Coming Soon</Text>
+            </View>
+          </View>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuItemDisabled}>
             <View style={[styles.settingIcon, { backgroundColor: '#F1F5F9' }]}>
-              <Ionicons name="mail-outline" size={22} color="#64748B" />
+              <Ionicons name="mail-outline" size={22} color="#94A3B8" />
             </View>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>Email Notifications</Text>
+              <Text style={styles.settingTitleDisabled}>Email Notifications</Text>
               <Text style={styles.settingDescription}>Weekly summary emails</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
-          </TouchableOpacity>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Coming Soon</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -324,6 +328,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+  },
+  menuItemDisabled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    opacity: 0.7,
+  },
+  settingTitleDisabled: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginBottom: 2,
+  },
+  comingSoonBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
   },
   bottomSpacer: {
     height: 40,

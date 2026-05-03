@@ -270,9 +270,12 @@ export default function Payment() {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.addMethodBtn}>
-            <Ionicons name="add-circle-outline" size={20} color="#3B82F6" />
-            <Text style={styles.addMethodText}>Add Payment Method</Text>
+          <TouchableOpacity style={styles.addMethodBtn} onPress={() => {}}>
+            <Ionicons name="add-circle-outline" size={20} color="#94A3B8" />
+            <Text style={styles.addMethodTextDisabled}>Add Payment Method</Text>
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonText}>Coming Soon</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -642,6 +645,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#3B82F6',
+  },
+  addMethodTextDisabled: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  comingSoonBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
   },
   trustRow: {
     flexDirection: 'row',
